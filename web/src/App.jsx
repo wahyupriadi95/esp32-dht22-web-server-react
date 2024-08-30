@@ -1,11 +1,12 @@
-import { useEffect, useState } from 'react'
-import { parseISO, format } from 'date-fns'
+import { format, parseISO } from 'date-fns'
 import { id } from 'date-fns/locale'
+import { useEffect, useState } from 'react'
 import './App.css'
+
+const roundNumber = (num, dec) => (Math.round((num) * 100) / 100).toFixed(dec)
 
 function App() {
   const [dht, setDht] = useState(null)
-  console.log("🚀 ~ App ~ dht:", dht)
   const [loading, setLoading] = useState(false);
 
   const getCount = async () => {
@@ -24,7 +25,7 @@ function App() {
   }
 
   useEffect(() => {
-    getCount()
+      getCount()
   }, [])
 
   return (
@@ -42,12 +43,14 @@ function App() {
         <section className='flex flex-col md:flex-row w-100 gap-4 mt-2'>
           <div className='flex-auto rounded-lg bg-white p-6 '>
             <h3 className='text-lg md:text-xl text-black'>Suhu</h3>
-            <p className='text-xl md:text-2xl text-black'>{dht?.temperature ?? ""}</p>
+            <p className='text-xl md:text-2xl text-black'>{dht?.temperature ? `${roundNumber(dht?.temperature, 2)}°C` : "-"}</p>
           </div>
           <div className='flex-auto rounded-lg bg-white p-6 '>
             <h3 className='text-lg md:text-xl text-black'>Kelembapan</h3>
-            <p className='text-xl md:text-2xl text-black'>{dht?.humidity ?? "-"}</p>
+            <p className='text-xl md:text-2xl text-black'>{dht?.humidity ? `${roundNumber(dht?.humidity, 2)}%` : "-"}</p>
           </div>
+        </section>
+        <section>
           <a className='text-center mt-2' href=''>Lihat Riwayat</a>
         </section>
       </main>

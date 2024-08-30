@@ -11,6 +11,16 @@
 #include "ArduinoJson.h"
 #include "LittleFS.h"
 #include "time.h"
+#include "Adafruit_Sensor.h"
+#include "DHT.h"
+#include "DHT_U.h"
+
+#define LEDPIN 2
+#define DHTPIN 4
+#define DHTTYPE DHT22
+
+DHT_Unified dht(DHTPIN, DHTTYPE);
+uint32_t delayMS;
 
 const char *ntpServer = "pool.ntp.org";
 const long gmtOffset_sec = 0;
@@ -23,12 +33,12 @@ const char *password = "tidakada";
 // const char *ssid = "Smugcat";
 // const char *password = "tidakada";
 
-// Set LED GPIO
-const int ledPin = 2;
 // Stores LED state
 String ledState;
 int countState = 0;
 String serverTime;
+float temp;
+float humd;
 
 // Create AsyncWebServer object on port 80
 AsyncWebServer server(80);
@@ -53,8 +63,8 @@ void getCount(AsyncWebServerRequest *request)
 {
   Serial.println("Get Count");
   json.clear();
-  json["temperature"] = countState;
-  json["humidity"] = countState;
+  json["temperature"] = temp;
+  json["humidity"] = humd;
   json["serverTime"] = serverTime;
   serializeJson(json, buffer);
   request->send(200, "application/json", buffer);
@@ -87,9 +97,9 @@ void blinkLED(const int &count)
 {
   for (int i = 0; i < count; i++)
   {
-    digitalWrite(ledPin, HIGH);
+    digitalWrite(LEDPIN, HIGH);
     delay(100);
-    digitalWrite(ledPin, LOW);
+    digitalWrite(LEDPIN, LOW);
     delay(100);
   }
 }
@@ -154,8 +164,8 @@ void setupRouting()
 void setup()
 {
   // Serial port for debugging purposes
-  Serial.begin(115200);
-  pinMode(ledPin, OUTPUT);
+  Serial.begin(9600);
+  pinMode(LEDPIN, OUTPUT);
 
   if (!LittleFS.begin(true))
   {
@@ -165,10 +175,111 @@ void setup()
 
   connectToWifi();
 
+  sensor_t sensor;
+  dht.temperature().getSensor(&sensor);
+  Serial.println("------------------------------------");
+  Serial.println("Temperature");
+  Serial.print("Sensor:       ");
+  Serial.println(sensor.name);
+  Serial.print("Driver Ver:   ");
+  Serial.println(sensor.version);
+  Serial.print("Unique ID:    ");
+  Serial.println(sensor.sensor_id);
+  Serial.print("Max Value:    ");
+  Serial.print(sensor.max_value);
+  Serial.println(" *C");
+  Serial.print("Min Value:    ");
+  Serial.print(sensor.min_value);
+  Serial.println(" *C");
+  Serial.print("Resolution:   ");
+  Serial.print(sensor.resolution);
+  Serial.println(" *C");
+  Serial.println("------------------------------------");
+  // Print humidity sensor details.
+  dht.humidity().getSensor(&sensor);
+  Serial.println("------------------------------------");
+  Serial.println("Humidity");
+  Serial.print("Sensor:       ");
+  Serial.println(sensor.name);
+  Serial.print("Driver Ver:   ");
+  Serial.println(sensor.version);
+  Serial.print("Unique ID:    ");
+  Serial.println(sensor.sensor_id);
+  Serial.print("Max Value:    ");
+  Serial.print(sensor.max_value);
+  Serial.println("%");
+  Serial.print("Min Value:    ");
+  Serial.print(sensor.min_value);
+  Serial.println("%");
+  Serial.print("Resolution:   ");
+  Serial.print(sensor.resolution);
+  Serial.println("%");
+  Serial.println("------------------------------------");
+  // Set delay between sensor readings based on sensor details.
+  delayMS = sensor.min_delay / 1000;
+  dht.begin();
+  sensors_event_t event;
+  dht.temperature().getEvent(&event);
+  if (isnan(event.temperature))
+  {
+    Serial.println("Error reading temperature!");
+  }
+  else
+  {
+    Serial.print("Temperature: ");
+    Serial.print(event.temperature);
+    temp = event.temperature;
+    Serial.println(" *C");
+  }
+  // Get humidity event and print its value.
+  dht.humidity().getEvent(&event);
+  if (isnan(event.relative_humidity))
+  {
+    Serial.println("Error reading humidity!");
+  }
+  else
+  {
+    Serial.print("Humidity: ");
+    Serial.print(event.relative_humidity);
+    humd = event.relative_humidity;
+    Serial.println("%");
+  }
+
   configTime(gmtOffset_sec, daylightOffset_sec, ntpServer);
   printLocalTime();
 
   setupRouting();
 }
 
-void loop() {}
+void loop()
+{
+  // Delay between measurements.
+  delay(delayMS);
+  // Get temperature event and print its value.
+  sensors_event_t event;
+  dht.temperature().getEvent(&event);
+  if (isnan(event.temperature))
+  {
+    Serial.println("Error reading temperature!");
+  }
+  else
+  {
+    Serial.print("Temperature: ");
+    Serial.print(event.temperature);
+    temp = event.temperature;
+    Serial.println(" *C");
+  }
+  // Get humidity event and print its value.
+  dht.humidity().getEvent(&event);
+  if (isnan(event.relative_humidity))
+  {
+    Serial.println("Error reading humidity!");
+  }
+  else
+  {
+    Serial.print("Humidity: ");
+    Serial.print(event.relative_humidity);
+    humd = event.relative_humidity;
+    Serial.println("%");
+  }
+}
